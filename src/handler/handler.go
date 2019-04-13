@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -48,9 +49,10 @@ func Uploaded(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("io.Copy", err)
 			return
 		}
-		newFile.Seek(0, 0)
+		_, _ = newFile.Seek(0, 0)
 		fileMeta.FileSha1 = util.FileSha1(newFile)
 		meta.UpdataFileMeta(fileMeta)
+		fmt.Println(fileMeta)
 		// 页面按跳转
 		http.Redirect(w, r, "/file/upload/suc", http.StatusFound)
 	}
@@ -61,4 +63,82 @@ func UploadSuc(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("io.Copy", err)
 		return
 	}
+}
+
+/*func FileQueryHandle(w http.ResponseWriter,r *http.Request){
+	r.ParseForm()
+	filehash:= r.Form.Get("filehash")
+	data,err:=json.Marshal(filehash)
+	if err!=nil{
+		w.WriteHeader()
+	}
+}*/
+// GetFileMetaHandle获取hash
+func GetFileMetaHandler(w http.ResponseWriter, r *http.Request) {
+	_ = r.ParseForm()
+	filehash := r.Form["filehash"][0]
+	fMeta := meta.GetFileMeta(filehash)
+	data, err := json.Marshal(fMeta)
+	fmt.Println("err", fMeta)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Println("err")
+		return
+	}
+	_, _ = w.Write(data)
+}
+func DownloadHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	filehash := r.Form["filehash"][0]
+	fMetafile := meta.GetFileMeta(filehash)
+	f, err := os.Open(fMetafile.Location)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+	data, err := ioutil.ReadAll(f)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-type", "application/octect-stream")
+	w.Header().Set("content-disposition", "attachment;filename=\""+fMetafile.FileName+"\"")
+	_, _ = w.Write(data)
+}
+func FileUpdateMetaHandler(w http.ResponseWriter, r *http.Request) {
+	_ = r.ParseForm()
+	opType := r.Form.Get("op")
+	fileHash := r.Form.Get("filehash")
+	newName := r.Form.Get("filename")
+	if opType != "0" {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	fileMetas := meta.GetFileMeta(fileHash)
+	fileMetas.FileName = newName
+	meta.UpdataFileMeta(fileMetas)
+	data, err := json.Marshal(fileMetas)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+func FileDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	_ = r.ParseForm()
+	fileHash := r.Form.Get("filehash")
+	fMeta := meta.GetFileMeta(fileHash)
+	err := os.Remove(fMeta.Location)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	meta.RemoveFileMeta(fileHash)
+	w.WriteHeader(http.StatusOK)
 }

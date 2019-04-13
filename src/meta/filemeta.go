@@ -24,3 +24,8 @@ func UpdataFileMeta(fmeta FileMeta) {
 func GetFileMeta(fileSha1 string) FileMeta {
 	return fileMetas[fileSha1]
 }
+
+// RemoveFileMeta : 删除key
+func RemoveFileMeta(fileSha1 string) {
+	delete(fileMetas, fileSha1)
+}
