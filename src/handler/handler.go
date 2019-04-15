@@ -13,12 +13,6 @@ import (
 )
 
 func Uploaded(w http.ResponseWriter, r *http.Request) {
-	file, err := os.Create("6.txt")
-	if err != nil {
-		fmt.Println("ioutilfff.ReadFile哦", err)
-		return
-	}
-	defer file.Close()
 	if r.Method == "GET" {
 		data, err := ioutil.ReadFile("./static/view/index.html")
 		if err != nil {
@@ -44,6 +38,7 @@ func Uploaded(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("os.Create", err)
 			return
 		}
+		defer newFile.Close()
 		fileMeta.FileSize, err = io.Copy(newFile, file)
 		if err != nil {
 			fmt.Println("io.Copy", err)
@@ -133,6 +128,7 @@ func FileUpdateMetaHandler(w http.ResponseWriter, r *http.Request) {
 func FileDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	_ = r.ParseForm()
 	fileHash := r.Form.Get("filehash")
+	fmt.Println(fileHash)
 	fMeta := meta.GetFileMeta(fileHash)
 	err := os.Remove(fMeta.Location)
 	if err != nil {
